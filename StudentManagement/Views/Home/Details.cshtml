@@ -1,0 +1,37 @@
+﻿@model HomeDetailsViewModel
+
+@{
+    ViewBag.Title = "Student Details";
+    var photoPath = "~/Images/" + (Model.Student.PhotoPath ?? "noimage.jpg");
+}
+
+<div class="row justify-content-center m-3" style="border-radius:15px;">
+    <div class="col-sm-5">
+        <div class="card">
+            <div class="card-header">
+                <h1>@Model.Student.FirstName @Model.Student.LastName</h1>
+            </div>
+        </div>
+
+        <div class="card-body text-center">
+            <img class="card-img-top" src="@photoPath" asp-append-version="true" />
+
+            <div class="card-img-bottom text-center">
+                <h4 style="color: white;">Student ID : @Model.Student.Id</h4>
+                <h4 style="color: white;">Email : @Model.Student.Email</h4>
+                <h4 style="color: white;">Department : @Model.Student.Department</h4>
+            </div>
+        </div>
+        <div class="card-footer text-center">
+            <form asp-action="Delete" asp-route-id="@Model.Student.Id" method="post">
+                <a asp-controller="home" asp-action="index" class="btn btn-success">Back</a>
+                <a asp-controller="home" asp-action="edit" asp-route-id="@Model.Student.Id" class="btn btn-success">Edit</a>
+                <button type="submit" class="btn btn-danger m-1" onclick="return confirm('Do you want to delete following student: @Model.Student.FirstName @Model.Student.LastName?')">Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/CustomScript.js"></script>
+}

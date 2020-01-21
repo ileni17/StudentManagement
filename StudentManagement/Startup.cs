@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StudentManagement.Models;
+using StudentManagement.Services;
+using StudentManagement.Services.Interfaces;
 
 namespace StudentManagement
 {
@@ -27,6 +29,7 @@ namespace StudentManagement
             services.AddDbContextPool<AppDbContext>(options => options.UseSqlServer(_config.GetConnectionString("StudentDBConnection")));
             services.AddMvc();
             services.AddScoped<IStudentRepository, SQLStudentRepository>();
+            services.AddScoped<IHomeService, HomeService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

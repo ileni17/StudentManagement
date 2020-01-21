@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using StudentManagement.Models;
+using StudentManagement.Services.Interfaces;
 using StudentManagement.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -13,25 +14,26 @@ namespace StudentManagement.Controllers
 {
     public class HomeController : Controller
     {
-        private IStudentRepository _studentRepository;
+        private IStudentRepository studentRepository;
         private IHostingEnvironment hostingEnvironment;
+        private IHomeService homeService;
 
-        public HomeController(IStudentRepository studentRepository,
-                              IHostingEnvironment hostingEnvironment)
+        public HomeController(IStudentRepository studentRepository, IHostingEnvironment hostingEnvironment, IHomeService homeService)
         {
-            _studentRepository = studentRepository;
+            this.studentRepository = studentRepository;
             this.hostingEnvironment = hostingEnvironment;
+            this.homeService = homeService;
         }
 
         public ViewResult Index()
         {
-            var model = _studentRepository.GetAllStudent();
+            var model = studentRepository.GetAllStudent();
             return View(model);
         }
 
         public ViewResult Details(int? id)
         {
-            Student student = _studentRepository.GetStudent(id.Value);
+            Student student = studentRepository.GetStudent(id.Value);
 
             //Setting up status code if student with certain id does not exist
             if (student == null)
@@ -58,23 +60,16 @@ namespace StudentManagement.Controllers
         [HttpGet]
         public ViewResult Edit(int id)
         {
-            Student student = _studentRepository.GetStudent(id);
-            StudentEditViewModel studentEditViewModel = new StudentEditViewModel
-            {
-                Id = student.Id,
-                FirstName = student.FirstName,
-                LastName = student.LastName,
-                Email = student.Email,
-                Department = student.Department,
-                ExistingPhotoPath = student.PhotoPath
-            };
+            Student student = studentRepository.GetStudent(id);
+            StudentEditViewModel studentEditViewModel = homeService.MapStudentToViewModel(student);
             return View(studentEditViewModel);
         }
+
 
         [HttpPost]
         public IActionResult Delete(int id)
         {
-            _studentRepository.Delete(id);
+            studentRepository.Delete(id);
             return RedirectToAction("index");
         }
 
@@ -83,58 +78,13 @@ namespace StudentManagement.Controllers
         {
             if (ModelState.IsValid)
             {
-                Student student = _studentRepository.GetStudent(model.Id);
-                student.FirstName = model.FirstName;
-                student.LastName = model.LastName;
-                student.Email = model.Email;
-                student.Department = model.Department;
-                if (model.Photo != null)
-                {
-                    //Check if user uploaded photo and its location
-                    if (model.ExistingPhotoPath != null)
-                    {
-                        string filePath = Path.Combine(hostingEnvironment.WebRootPath, "images", model.ExistingPhotoPath);
-                        //Delete photo
-                        System.IO.File.Delete(filePath);
-                    }
-                    student.PhotoPath = ProcessUploadedFile(model);
-                }
-
-                string uniqueFileName = ProcessUploadedFile(model);
-                Student newStudent = new Student
-                {
-                    FirstName = model.FirstName,
-                    LastName = model.LastName,
-                    Email = model.Email,
-                    Department = model.Department,
-                    PhotoPath = uniqueFileName
-                };
-
-                _studentRepository.Update(student);
-                //redirect to the details of the newly created student
+                Student student = homeService.EditStudent(model);
+                studentRepository.Update(student);
+                //redirect to the home page
                 return RedirectToAction("index", "home");
             }
 
             return View();
-        }
-
-        private string ProcessUploadedFile(StudentCreateViewModel model)
-        {
-            string uniqueFileName = null;
-            if (model.Photo != null)
-            {
-                string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
-                //ensure that uploads with same name are uploaded as different files
-                uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Photo.FileName;
-                //ensure that file path guides to the folder where we want to save our uploads
-                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    model.Photo.CopyTo(fileStream);
-                }
-            }
-
-            return uniqueFileName;
         }
 
         [HttpPost]
@@ -142,26 +92,9 @@ namespace StudentManagement.Controllers
         {
             if (ModelState.IsValid)
             {
-                string uniqueFileName = null;
-                if (model.Photo != null)
-                {
-                    string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
-                    //ensure that uploads with same name are uploaded as different files
-                    uniqueFileName = Guid.NewGuid().ToString() + "_" + model.Photo.FileName;
-                    //ensure that file path guides to the folder where we want to save our uploads
-                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                    model.Photo.CopyTo(new FileStream(filePath, FileMode.Create));
-                }
-                Student newStudent = new Student
-                {
-                    FirstName = model.FirstName,
-                    LastName = model.LastName,
-                    Email = model.Email,
-                    Department = model.Department,
-                    PhotoPath = uniqueFileName
-                };
+                Student newStudent = homeService.CreateStudent(model);
 
-                _studentRepository.Add(newStudent);
+                studentRepository.Add(newStudent);
                 //redirect to the details of the newly created student
                 return RedirectToAction("details", new { id = newStudent.Id });
             }
